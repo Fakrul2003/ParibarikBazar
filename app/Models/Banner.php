@@ -5,18 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class Banner extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'category',
-        'price',
-        'stock',
-        'sizes',
         'image',
-        'image_2', // নতুন যোগ করুন
-        'image_3',
     ];
 }

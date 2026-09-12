@@ -17,7 +17,10 @@ return new class extends Migration
     $table->string('category')->default('General');
     $table->decimal('price', 10, 2);
     $table->integer('stock')->default(0);
+    $table->string('sizes')->nullable();
     $table->string('image')->nullable();
+    $table->string('image_2')->nullable(); // নতুন যোগ করুন
+    $table->string('image_3')->nullable();
     $table->timestamps();
 });
     }

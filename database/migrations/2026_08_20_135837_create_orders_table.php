@@ -11,18 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('orders', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-    $table->string('name');
-    $table->text('address');
-    $table->string('phone');
-    $table->integer('quantity')->default(1);
-    $table->decimal('total_price', 10, 2);
-    $table->string('status')->default('Pending'); // Pending, Out for Delivery, Delivered
-    $table->timestamps();
-});
+        Schema::create('orders', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
+            $table->text('address');
+            $table->string('phone');
+            $table->integer('quantity')->default(1);
+            $table->text('size_data')->nullable(); // এখানে সাইজ কলামটি যুক্ত করা হলো
+            $table->decimal('total_price', 10, 2);
+            $table->string('status')->default('Pending'); // Pending, Out for Delivery, Delivered
+            $table->timestamps();
+        });
     }
 
     /**

@@ -18,7 +18,21 @@ createInertiaApp({
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
-            default:
+           case name === 'productDetails':
+            return null;
+             case name === 'dashboard':
+            return null;
+           case name === 'navOption/About':
+            return null;
+             case name === 'navOption/Faqs':
+            return null;
+            case name === 'navOption/Wishlists':
+            return null;
+            case name === 'Category/Show':
+            return null;
+
+
+                default:
                 return AppLayout;
         }
     },
