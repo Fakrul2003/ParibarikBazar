@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\Banner;
+use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -48,7 +51,7 @@ class OrderController extends Controller
             'category' => 'required|string|max:255',
             'price' => 'required|numeric',
             'stock' => 'required|integer',
-            'sizes' => 'nullable|string|max:255', // জুতার সাইজের জন্য কমা দিয়ে (যেমন: 39, 40, 41)
+            'sizes' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'image_2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'image_3' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
@@ -77,7 +80,7 @@ class OrderController extends Controller
             'category' => $request->category,
             'price' => $request->price,
             'stock' => $request->stock,
-            'sizes' => $request->sizes, // সাইজগুলো সেভ করা হলো
+            'sizes' => $request->sizes,
             'image' => $imagePath,
             'image_2' => $imagePath2,
             'image_3' => $imagePath3,
@@ -98,11 +101,15 @@ class OrderController extends Controller
             'sizes_data' => 'nullable|string',
             'size_data' => 'nullable|string',
             'size' => 'nullable|string',
+            'total_price' => 'nullable|numeric',
         ]);
 
         $product = Product::find($request->product_id);
 
         $sizesData = $request->sizes_data ?? $request->size_data;
+        $totalPrice = $request->filled('total_price') && (float)$request->total_price > 0
+            ? (float)$request->total_price
+            : ($product ? $product->price * $request->quantity : 0);
 
         Order::create([
             'user_id' => Auth::id(),
@@ -113,7 +120,7 @@ class OrderController extends Controller
             'quantity' => $request->quantity,
             'size' => $request->size ?? (is_string($sizesData) && !str_contains($sizesData, '{') ? $sizesData : null),
             'size_data' => $sizesData,
-            'total_price' => $product->price * $request->quantity,
+            'total_price' => $totalPrice,
             'status' => 'Pending',
         ]);
 
@@ -131,7 +138,7 @@ class OrderController extends Controller
         ]);
     }
 
-    // ড্যাশবোর্ডে ডেটা দেখানোর জন্য (ইউজার ও অ্যাডমিন উভয় ড্যাশবোর্ডের ডেটা)
+    // ড্যাশবোর্ডে ডেটা দেখানোর জন্য
     public function dashboard()
     {
         $user = Auth::user();
@@ -144,9 +151,13 @@ class OrderController extends Controller
         }
 
         $orders = Order::with('product')->where('user_id', $user ? $user->id : 0)->latest()->get();
+        $messages = ($user && Schema::hasTable('messages'))
+            ? Message::with('sender')->where('user_id', $user->id)->orderBy('created_at', 'asc')->get()
+            : [];
 
         return Inertia::render('dashboard', [
-            'orders' => $orders
+            'orders' => $orders,
+            'messages' => $messages,
         ]);
     }
 
@@ -172,15 +183,6 @@ class OrderController extends Controller
         ]);
     }
 
-    public function adminProducts()
-    {
-        $products = Product::latest()->get();
-
-        return Inertia::render('admin/Products', [
-            'products' => $products
-        ]);
-    }
-
     public function adminInvoices()
     {
         $orders = Order::with(['user', 'product'])->latest()->get();
@@ -190,15 +192,103 @@ class OrderController extends Controller
         ]);
     }
 
-    public function adminMessages()
+    public function adminMessages(Request $request)
     {
-        return Inertia::render('admin/Messages', []);
+        if (!Schema::hasTable('messages')) {
+            return Inertia::render('admin/Messages', [
+                'customers' => [],
+                'activeUserId' => null,
+                'messages' => [],
+            ]);
+        }
+
+        $allMessages = Message::with(['sender', 'user'])->orderBy('created_at', 'asc')->get();
+        $threads = $allMessages->groupBy('user_id');
+
+        $customers = User::whereIn('id', $threads->keys())->get()->map(function ($customer) use ($threads) {
+            $userMsgs = $threads->get($customer->id);
+            $lastMsg = $userMsgs ? $userMsgs->last() : null;
+
+            $unreadCount = $userMsgs ? $userMsgs->where('is_read', false)->filter(function($msg) {
+                return $msg->sender_id !== Auth::id();
+            })->count() : 0;
+
+            return [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'email' => $customer->email,
+                'avatar' => strtoupper(substr($customer->name, 0, 1)),
+                'lastMessage' => $lastMsg ? ($lastMsg->image ? '[Image Attachment]' : $lastMsg->message) : '',
+                'time' => $lastMsg ? $lastMsg->created_at->diffForHumans() : '',
+                'unread' => $unreadCount > 0,
+            ];
+        });
+
+        $activeUserId = $request->query('user_id') ?? ($customers->first()['id'] ?? null);
+        $activeMessages = [];
+
+        if ($activeUserId) {
+            $activeMessages = Message::with('sender')
+                ->where('user_id', $activeUserId)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            Message::where('user_id', $activeUserId)
+                ->where('sender_id', '!=', Auth::id())
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+        }
+
+        return Inertia::render('admin/Messages', [
+            'customers' => $customers->values(),
+            'activeUserId' => $activeUserId ? (int)$activeUserId : null,
+            'messages' => $activeMessages,
+        ]);
+    }
+
+    public function storeMessage(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'nullable|exists:users,id',
+            'message' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        if (!$request->message && !$request->hasFile('image')) {
+            return redirect()->back()->withErrors(['message' => 'Message or image is required']);
+        }
+
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return redirect()->back()->withErrors(['auth' => 'Unauthorized']);
+        }
+
+        $threadUserId = $request->user_id;
+        if ($authUser->role !== 'admin' || !$threadUserId) {
+            $threadUserId = $authUser->id;
+        }
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('messages', 'public');
+            $imagePath = '/storage/' . $path;
+        }
+
+        Message::create([
+            'user_id' => $threadUserId,
+            'sender_id' => $authUser->id,
+            'message' => $request->message,
+            'image' => $imagePath,
+            'is_read' => false,
+        ]);
+
+        return redirect()->back()->with('success', 'Message sent successfully');
     }
 
     public function acceptOrder(Order $order)
     {
-        $order->update(['status' => 'PAID']);
-        return redirect()->back()->with('success', 'Order accepted');
+        $order->update(['status' => 'Delivered']);
+        return redirect()->back()->with('success', 'Order status updated to Delivered');
     }
 
     public function rejectOrder(Order $order)
@@ -207,7 +297,6 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Order rejected');
     }
 
-    // ডেলিভারি ম্যান অর্ডার নিয়ে বের হলে স্ট্যাটাস আপডেট
     public function updateStatus(Request $request, Order $order)
     {
         $order->update(['status' => 'Out for Delivery']);
@@ -223,5 +312,55 @@ class OrderController extends Controller
             'categoryName' => $category,
             'products' => $products
         ]);
+    }
+
+    public function updateProduct(Request $request, Product $product)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'sizes' => 'nullable|string',
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'category' => $request->category,
+            'price' => $request->price,
+            'stock' => $request->stock,
+            'sizes' => $request->sizes,
+        ];
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $data['image'] = '/storage/' . $path;
+        }
+
+        if ($request->hasFile('image_2')) {
+            $path2 = $request->file('image_2')->store('products', 'public');
+            $data['image_2'] = '/storage/' . $path2;
+        }
+
+        if ($request->hasFile('image_3')) {
+            $path3 = $request->file('image_3')->store('products', 'public');
+            $data['image_3'] = '/storage/' . $path3;
+        }
+
+        $product->update($data);
+
+        return redirect()->back()->with('success', 'Product updated successfully');
+    }
+
+    public function destroyProduct(Product $product)
+    {
+        $product->delete();
+        return redirect()->back()->with('success', 'Product deleted successfully');
+    }
+
+    public function destroyOrder(Order $order)
+    {
+        $order->delete();
+        return redirect()->back()->with('success', 'Order deleted successfully');
     }
 }

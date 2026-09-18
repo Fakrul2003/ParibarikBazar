@@ -1,11 +1,11 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { 
-    LayoutDashboard, 
-    Package, 
-    ShoppingBag, 
-    FileText, 
-    MessageSquare, 
+import {
+    LayoutDashboard,
+    Package,
+    ShoppingBag,
+    FileText,
+    MessageSquare,
     Home,
     LogOut,
     User as UserIcon,
@@ -23,7 +23,6 @@ export default function AdminLayout({ children, title }: Props) {
 
     const navItems = [
         { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, pattern: '/admin/dashboard' },
-        { name: 'Products', href: '/admin/products', icon: Package, pattern: '/admin/products' },
         { name: 'Orders', href: '/admin/orders', icon: ShoppingBag, pattern: '/admin/orders' },
         { name: 'Invoices', href: '/admin/invoices', icon: FileText, pattern: '/admin/invoices' },
         { name: 'Messages', href: '/admin/messages', icon: MessageSquare, pattern: '/admin/messages' },
@@ -97,8 +96,8 @@ export default function AdminLayout({ children, title }: Props) {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-                <div className="p-6 md:p-8 flex-1">
+            <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+               <div className="p-6 md:p-8 flex-1 overflow-hidden">
                     {children}
                 </div>
             </main>

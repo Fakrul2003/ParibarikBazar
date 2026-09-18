@@ -1,58 +1,147 @@
-import { Link } from '@inertiajs/react';
-import { useState } from 'react';
-import OrderModal from '@/components/myProduct/OrderModal'; // মডাল ইমপোর্ট করা হলো
+import { Link, router } from '@inertiajs/react';
+import { useState, useRef, useEffect } from 'react';
+import OrderModal from '@/components/myProduct/OrderModal';
+import EditProductModal from '@/components/myProduct/EditProductModal';
+import { MoreVertical, Edit, Trash2 } from 'lucide-react';
 
 interface Product {
     id: number;
     name: string;
     category: string;
     price: number;
+    stock?: number;
     image?: string;
+    image_2?: string;
+    image_3?: string;
     sizes?: string;
 }
 
-export default function ProductCard({ product, auth }: { product: Product; auth?: { user: any } }) {
+interface ProductCardProps {
+    product: Product;
+    auth?: { user: any };
+    isAdmin?: boolean;
+}
+
+export default function ProductCard({ product, auth, isAdmin = true }: ProductCardProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    const checkIsAdmin = isAdmin || Boolean(auth?.user && auth.user.role === 'admin');
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleDeleteProduct = () => {
+        setIsMenuOpen(false);
+        if (window.confirm(`আপনি কি নিশ্চিত যে "${product.name}" প্রোডাক্টটি ডিলিট করতে চান?`)) {
+            router.delete(`/admin/product/${product.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    alert('প্রোডাক্ট সফলভাবে ডিলিট করা হয়েছে!');
+                },
+                onError: (errors) => {
+                    console.error('Delete error:', errors);
+                    alert('প্রোডাক্ট ডিলিট করতে ব্যর্থ হয়েছে।');
+                }
+            });
+        }
+    };
 
     return (
-        <div className="bg-white  border-2  rounded-md  shadow-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-xl shadow-xs flex flex-col justify-between relative group">
+            
+            {/* ৩-ডট (3-dots) মেনু এডমিনদের জন্য */}
+            {checkIsAdmin && (
+                <div className="absolute top-2 right-2 z-20" ref={menuRef}>
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(!isMenuOpen);
+                        }}
+                        className="p-1.5 bg-white/90 dark:bg-neutral-900/90 hover:bg-white dark:hover:bg-neutral-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md backdrop-blur-xs transition cursor-pointer border border-gray-200/60 dark:border-neutral-700"
+                        title="Options"
+                    >
+                        <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {isMenuOpen && (
+                        <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-gray-100 dark:border-neutral-700 py-1 z-30 text-xs font-semibold">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    setIsEditModalOpen(true);
+                                }}
+                                className="w-full text-left px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-neutral-700 flex items-center gap-2 transition cursor-pointer"
+                            >
+                                <Edit className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>এডিট (Edit)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteProduct}
+                                className="w-full text-left px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 transition cursor-pointer"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>ডিলিট (Delete)</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div>
-                <Link href={`/product/${product.id}`} className="block group">
+                <Link href={`/product/${product.id}`} className="block group overflow-hidden rounded-t-xl">
                     <img
                         src={product.image ? `${product.image}` : 'https://via.placeholder.com/150'}
                         alt={product.name}
-                        className="w-full h-52 object-cover rounded-t-sm group-hover:opacity-95 transition"
+                        className="w-full h-52 object-cover rounded-t-xl group-hover:scale-105 transition duration-300"
                     />
                 </Link>
 
-             <div className='px-2 pb-2'>
-                   <Link href={`/product/${product.id}`} className="block">
-                    <h3 className="font-bold text-lg text-gray-900   hover:text-green-600 transition">
-                        {product.name}
-                    </h3>
-                </Link>
+                <div className="p-3">
+                    <Link href={`/product/${product.id}`} className="block">
+                        <h3 className="font-bold text-base text-gray-900 dark:text-white hover:text-green-600 transition line-clamp-1">
+                            {product.name}
+                        </h3>
+                    </Link>
 
-                <p className="text-yellow-900 font-bold mt-1">৳ {product.price}</p>
+                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-base mt-1">৳ {product.price}</p>
 
-             <button
-                type="button"
-                onClick={() => setIsOpen(true)}
-                className="mt-4 w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition cursor-pointer"
-            >
-                Buy Now
-            </button>
-             </div>
-
+                    <button
+                        type="button"
+                        onClick={() => setIsOpen(true)}
+                        className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition cursor-pointer shadow-sm text-sm"
+                    >
+                        Buy Now
+                    </button>
+                </div>
             </div>
 
-
-            {/* আলাদা করা অর্ডার মডাল এখানে কল করা হলো */}
+            {/* অর্ডার মোডাল */}
             <OrderModal
                 product={product}
                 isOpen={isOpen}
                 setIsOpen={setIsOpen}
                 auth={auth}
                 initialQuantity={1}
+            />
+
+            {/* এডমিন এডিট মোডাল */}
+            <EditProductModal
+                product={product}
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
             />
         </div>
     );

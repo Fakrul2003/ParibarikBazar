@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from '@inertiajs/react';
+import { parseProductSizes } from '@/components/myProduct/EditProductModal';
+
+export interface SelectedVariantItem {
+    color: string;
+    colorImg?: string;
+    size: string;
+    quantity: number;
+    price: number;
+}
 
 interface Product {
     id: number;
     name: string;
     price: number;
     sizes?: string;
+    image?: string;
 }
 
 interface OrderModalProps {
@@ -14,80 +24,82 @@ interface OrderModalProps {
     setIsOpen: (isOpen: boolean) => void;
     auth?: { user: any };
     initialQuantity?: number;
+    selectedVariants?: SelectedVariantItem[];
 }
 
-export default function OrderModal({ product, isOpen, setIsOpen, auth, initialQuantity = 1 }: OrderModalProps) {
-    // প্রতিটি সাইজের জন্য আলাদা পরিমাণ ট্র্যাক করতে স্টেট ব্যবহার করা হলো (যেমন: { '39': 1, '40': 2 })
-    const [sizeQuantities, setSizeQuantities] = useState<{ [key: string]: number }>({});
+const EMPTY_VARIANTS: SelectedVariantItem[] = [];
 
-    const sizesList = product.sizes ? product.sizes.split(',').map((s) => s.trim()).filter(Boolean) : [];
+export default function OrderModal({
+    product,
+    isOpen,
+    setIsOpen,
+    auth,
+    initialQuantity = 1,
+    selectedVariants = EMPTY_VARIANTS
+}: OrderModalProps) {
+    const sizesList = parseProductSizes(product.sizes);
+
+    const hasMultiVariants = selectedVariants && selectedVariants.length > 0;
+
+    const totalQty = hasMultiVariants
+        ? selectedVariants.reduce((sum, item) => sum + item.quantity, 0)
+        : initialQuantity;
+
+    const totalPrice = hasMultiVariants
+        ? selectedVariants.reduce((sum, item) => sum + item.quantity * item.price, 0)
+        : product.price * initialQuantity;
+
+    const sizesDataPayload = hasMultiVariants
+        ? JSON.stringify({ variants: selectedVariants })
+        : '';
 
     const { data, setData, post, processing, reset } = useForm({
         product_id: product.id,
         name: auth?.user ? auth.user.name : '',
         address: '',
         phone: '',
-        sizes_data: '', // JSON ফরম্যাটে সাইজ ও পরিমাণের তথ্য যাবে
-        size_data: '',
-        total_price: product.price * initialQuantity,
-        quantity: initialQuantity,
+        sizes_data: sizesDataPayload,
+        size_data: sizesDataPayload,
+        total_price: totalPrice,
+        quantity: totalQty,
     });
+
+    // Update form state if props change
+    React.useEffect(() => {
+        const calculatedQty = hasMultiVariants
+            ? selectedVariants.reduce((sum, item) => sum + item.quantity, 0)
+            : initialQuantity;
+        const calculatedTotal = hasMultiVariants
+            ? selectedVariants.reduce((sum, item) => sum + item.quantity * item.price, 0)
+            : product.price * initialQuantity;
+        const jsonPayload = hasMultiVariants ? JSON.stringify({ variants: selectedVariants }) : '';
+
+        setData((prev) => {
+            if (
+                prev.product_id === product.id &&
+                prev.quantity === calculatedQty &&
+                prev.total_price === calculatedTotal &&
+                prev.sizes_data === jsonPayload
+            ) {
+                return prev;
+            }
+            return {
+                ...prev,
+                product_id: product.id,
+                quantity: calculatedQty,
+                total_price: calculatedTotal,
+                sizes_data: jsonPayload,
+                size_data: jsonPayload,
+            };
+        });
+    }, [selectedVariants, initialQuantity, product.id, product.price]);
 
     if (!isOpen) return null;
 
-    // পরিমাণ বাড়ানোর ফাংশন
-    const handleIncrement = (size: string) => {
-        const currentQty = sizeQuantities[size] || 0;
-        const updated = { ...sizeQuantities, [size]: currentQty + 1 };
-        setSizeQuantities(updated);
-        updateTotals(updated);
-    };
-
-    // পরিমাণ কমানোর ফাংশন
-    const handleDecrement = (size: string) => {
-        const currentQty = sizeQuantities[size] || 0;
-        if (currentQty > 0) {
-            const updated = { ...sizeQuantities, [size]: currentQty - 1 };
-            if (updated[size] === 0) delete updated[size];
-            setSizeQuantities(updated);
-            updateTotals(updated);
-        }
-    };
-
-    // মোট পরিমাণ এবং মোট দাম হিসাব করার ফাংশন
-    const updateTotals = (updatedSizes: { [key: string]: number }) => {
-        let totalQty = 0;
-        Object.values(updatedSizes).forEach((qty) => {
-            totalQty += qty;
-        });
-
-        const jsonString = Object.keys(updatedSizes).length > 0 ? JSON.stringify(updatedSizes) : '';
-        const totalPrice = (totalQty > 0 ? totalQty : initialQuantity) * product.price;
-
-        setData((prev) => ({
-            ...prev,
-            quantity: totalQty > 0 ? totalQty : initialQuantity,
-            total_price: totalPrice,
-            sizes_data: jsonString,
-            size_data: jsonString,
-        }));
-    };
-
-    const calculateSubtotal = () => {
-        let totalQty = 0;
-        Object.values(sizeQuantities).forEach((qty) => {
-            totalQty += qty;
-        });
-        if (totalQty === 0 && sizesList.length === 0) {
-            return product.price * initialQuantity;
-        }
-        return totalQty * product.price;
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (sizesList.length > 0 && Object.keys(sizeQuantities).length === 0) {
-            alert('দয়া করে অন্তত একটি সাইজ এবং পরিমাণ নির্বাচন করুন!');
+        if (hasMultiVariants && totalQty === 0) {
+            alert('দয়া করে অন্তত একটি প্রোডাক্ট ভ্যারিয়েন্ট ও পরিমাণ নির্বাচন করুন!');
             return;
         }
 
@@ -96,107 +108,132 @@ export default function OrderModal({ product, isOpen, setIsOpen, auth, initialQu
                 alert('অর্ডার সফলভাবে সম্পন্ন হয়েছে!');
                 setIsOpen(false);
                 reset();
-                setSizeQuantities({});
             },
         });
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 w-full max-w-lg shadow-xl text-white my-8">
-                <h2 className="text-xl font-bold mb-4">অর্ডার কনফার্ম করুন: {product.name}</h2>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl text-white my-8">
+                <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-4">
+                    <h2 className="text-lg font-bold text-white">অর্ডার কনফার্ম করুন: {product.name}</h2>
+                    <button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="text-neutral-400 hover:text-white transition cursor-pointer text-sm"
+                    >
+                        ✕
+                    </button>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* গ্রাহকের তথ্য */}
                     <div>
-                        <label className="block text-sm font-medium mb-1 text-neutral-300">আপনার নাম</label>
+                        <label className="block text-xs font-semibold mb-1 text-neutral-300">আপনার নাম</label>
                         <input
                             type="text"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             required
-                            className="w-full px-3 py-2 border rounded-lg bg-neutral-800 border-neutral-700 text-white"
-                            placeholder="পূর্ণ নাম লিখুন"
+                            className="w-full px-3.5 py-2.5 border rounded-xl bg-neutral-800 border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            placeholder="আপনার পূর্ণ নাম লিখুন"
                         />
                     </div>
 
-                    {/* সাইজ এবং প্লাস-মাইনাস কাউন্টার সেকশন */}
-                    {sizesList.length > 0 && (
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-neutral-300">সাইজ ও পরিমাণ নির্বাচন করুন</label>
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                {sizesList.map((size, index) => {
-                                    const qty = sizeQuantities[size] || 0;
-                                    return (
-                                        <div key={index} className="flex items-center justify-between bg-neutral-800 p-2 rounded-lg border border-neutral-700">
-                                            <span className="font-semibold bg-neutral-700 px-3 py-1 rounded">সাইজ: {size}</span>
-                                            <span className="text-sm text-green-400">৳ {product.price * qty}</span>
-                                            <div className="flex items-center gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDecrement(size)}
-                                                    className="w-8 h-8 bg-neutral-700 hover:bg-neutral-600 rounded-full flex items-center justify-center text-lg font-bold"
-                                                >
-                                                    -
-                                                </button>
-                                                <span className="w-6 text-center font-bold">{qty}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleIncrement(size)}
-                                                    className="w-8 h-8 bg-green-600 hover:bg-green-500 rounded-full flex items-center justify-center text-lg font-bold"
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    {/* সিলেক্ট করা কালার ও সাইজ ভ্যারিয়েন্ট সামারি */}
+                    {hasMultiVariants ? (
+                        <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 space-y-2.5">
+                            <div className="flex justify-between items-center text-xs font-bold text-emerald-400 border-b border-neutral-800 pb-2">
+                                <span>সিলেক্ট করা কালার ও সাইজসমূহ ({selectedVariants.length} টি ভ্যারিয়েন্ট)</span>
+                                <span>মোট: {totalQty} টি</span>
                             </div>
 
-                            {/* সাবটোটাল সেকশন */}
-                            <div className="flex justify-between items-center bg-neutral-800/80 p-3 rounded-lg mt-3 border border-neutral-700">
-                                <span className="font-bold text-neutral-300">Subtotal</span>
-                                <span className="font-bold text-green-400 text-lg">BDT {calculateSubtotal().toFixed(2)}</span>
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                                {selectedVariants.map((item, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex items-center justify-between bg-neutral-900 p-2.5 rounded-lg border border-neutral-800 text-xs"
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            {item.colorImg && (
+                                                <img
+                                                    src={item.colorImg}
+                                                    alt={item.color}
+                                                    className="w-9 h-9 object-cover rounded-md border border-neutral-700 shrink-0"
+                                                />
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-white truncate">
+                                                    কালার: <span className="text-emerald-400">{item.color}</span>
+                                                </p>
+                                                <p className="text-[11px] text-neutral-400">
+                                                    সাইজ: <span className="text-white font-medium">{item.size}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="text-right shrink-0">
+                                            <span className="font-bold text-emerald-400 block font-mono">
+                                                ৳ {item.price * item.quantity}
+                                            </span>
+                                            <span className="text-[10px] text-neutral-400">
+                                                ({item.quantity} × ৳{item.price})
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+
+                            <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-sm font-bold">
+                                <span className="text-neutral-300">মোট দেয় টাকা (Total):</span>
+                                <span className="text-emerald-400 text-base font-mono">৳ {totalPrice.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-neutral-800 p-3 rounded-xl border border-neutral-700 flex justify-between items-center text-sm font-bold">
+                            <span className="text-neutral-300">পরিমাণ: {data.quantity} টি</span>
+                            <span className="text-emerald-400 font-mono">৳ {data.total_price.toFixed(2)}</span>
                         </div>
                     )}
 
                     <div>
-                        <label className="block text-sm font-medium mb-1 text-neutral-300">ঠিকানা</label>
+                        <label className="block text-xs font-semibold mb-1 text-neutral-300">ডেলিভারি ঠিকানা</label>
                         <textarea
                             value={data.address}
                             onChange={(e) => setData('address', e.target.value)}
                             required
-                            className="w-full px-3 py-2 border rounded-lg bg-neutral-800 border-neutral-700 text-white"
-                            placeholder="আপনার ডেলিভারি ঠিকানা"
+                            rows={2}
+                            className="w-full px-3.5 py-2.5 border rounded-xl bg-neutral-800 border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            placeholder="আপনার সম্পূর্ণ ঠিকানা দিন"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1 text-neutral-300">মোবাইল নম্বর (Phone)</label>
+                        <label className="block text-xs font-semibold mb-1 text-neutral-300">মোবাইল নম্বর (Phone)</label>
                         <input
                             type="text"
                             value={data.phone}
                             onChange={(e) => setData('phone', e.target.value)}
                             required
-                            className="w-full px-3 py-2 border rounded-lg bg-neutral-800 border-neutral-700 text-white"
-                            placeholder="আপনার মোবাইল নম্বর দিন"
+                            className="w-full px-3.5 py-2.5 border rounded-xl bg-neutral-800 border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                            placeholder="আপনার ১১ ডিজিটের মোবাইল নম্বর দিন"
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6">
+                    <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800">
                         <button
                             type="button"
                             onClick={() => setIsOpen(false)}
-                            className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded-lg text-sm cursor-pointer"
+                            className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-semibold cursor-pointer text-neutral-300"
                         >
                             বাতিল
                         </button>
                         <button
                             type="submit"
-                            disabled={processing}
-                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium cursor-pointer"
+                            disabled={processing || (hasMultiVariants && totalQty === 0)}
+                            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-md"
                         >
-                            {processing ? 'অর্ডার হচ্ছে...' : 'কনফার্ম অর্ডার'}
+                            {processing ? 'অর্ডার হচ্ছে...' : 'অর্ডার কনফার্ম করুন'}
                         </button>
                     </div>
                 </form>
@@ -204,3 +241,4 @@ export default function OrderModal({ product, isOpen, setIsOpen, auth, initialQu
         </div>
     );
 }
+

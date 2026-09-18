@@ -38,15 +38,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // অ্যাডমিন আলাদা পেজসমূহ
     Route::get('/admin/dashboard', [OrderController::class, 'adminDashboard'])->name('admin.dashboard');
     Route::get('/admin/orders', [OrderController::class, 'adminOrders'])->name('admin.orders');
-    Route::get('/admin/products', [OrderController::class, 'adminProducts'])->name('admin.products');
     Route::get('/admin/invoices', [OrderController::class, 'adminInvoices'])->name('admin.invoices');
     Route::get('/admin/messages', [OrderController::class, 'adminMessages'])->name('admin.messages');
+    Route::post('/messages/send', [OrderController::class, 'storeMessage'])->name('messages.send');
 
     // অ্যাডমিন প্রোডাক্ট এবং অর্ডার স্ট্যাটাস অ্যাকশন
     Route::post('/admin/product/store', [OrderController::class, 'storeProduct'])->name('admin.product.store');
+    Route::post('/admin/product/{product}/update', [OrderController::class, 'updateProduct'])->name('admin.product.update');
+    Route::delete('/admin/product/{product}', [OrderController::class, 'destroyProduct'])->name('admin.product.destroy');
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
     Route::patch('/orders/{order}/accept', [OrderController::class, 'acceptOrder'])->name('orders.accept');
     Route::patch('/orders/{order}/reject', [OrderController::class, 'rejectOrder'])->name('orders.reject');
+    Route::delete('/orders/{order}', [OrderController::class, 'destroyOrder'])->name('orders.destroy');
 
     Route::get('/product/{product}', [OrderController::class, 'show'])->name('product.show');
 });

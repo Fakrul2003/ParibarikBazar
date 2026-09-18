@@ -1,10 +1,10 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/AdminLayout';
-import { 
-    DollarSign, 
-    ShoppingBag, 
-    Package, 
+import {
+    DollarSign,
+    ShoppingBag,
+    Package,
     TrendingUp,
     Users,
     ArrowUpRight,
@@ -94,14 +94,34 @@ export default function DashboardOverview({ orders = [], productsCount = 0, tota
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
                             {orders.slice(0, 5).map((order) => (
-                                <tr key={order.id} className="hover:bg-gray-50/50 dark:hover:bg-neutral-800/40">
+                                <tr
+                                    key={order.id}
+                                    onClick={() => router.visit(`/admin/orders?order=${order.id}`)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            router.visit(`/admin/orders?order=${order.id}`);
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    role="link"
+                                    className="cursor-pointer hover:bg-gray-50/50 dark:hover:bg-neutral-800/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500"
+                                >
                                     <td className="py-3.5 px-2 font-bold">#{order.id}</td>
                                     <td className="py-3.5 px-2 font-medium">{order.name}</td>
                                     <td className="py-3.5 px-2 text-gray-500">{order.product?.name || 'N/A'}</td>
                                     <td className="py-3.5 px-2 font-bold text-gray-900 dark:text-white">৳ {order.total_price}</td>
                                     <td className="py-3.5 px-2">
-                                        <span className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase">
-                                            {order.status}
+                                        <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
+                                            (order.status || 'PENDING').toUpperCase() === 'DELIVERED' || (order.status || 'PENDING').toUpperCase() === 'PAID'
+                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                : (order.status || 'PENDING').toUpperCase() === 'OUT FOR DELIVERY'
+                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                                : (order.status || 'PENDING').toUpperCase() === 'REJECTED' || (order.status || 'PENDING').toUpperCase() === 'CANCELLED'
+                                                ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                        }`}>
+                                            {order.status || 'Pending'}
                                         </span>
                                     </td>
                                 </tr>
