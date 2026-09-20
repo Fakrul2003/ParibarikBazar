@@ -36,6 +36,8 @@ interface Order {
         price: number;
         category?: string;
         image?: string;
+        image_2?: string;
+        image_3?: string;
         sizes?: string;
     };
 }
@@ -64,8 +66,8 @@ interface PageProps extends Record<string, unknown> {
 
 export default function Dashboard() {
     const { auth, orders, messages = [] } = usePage<PageProps>().props;
-     const isAdmin = true;
-     //  const isAdmin = auth?.user && auth.user.role === 'admin';
+   //     const isAdmin = true;
+    const isAdmin = auth?.user && auth.user.role === 'admin';
 
     const [messageText, setMessageText] = useState('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -86,6 +88,32 @@ export default function Dashboard() {
             return img;
         }
         return `/storage/${img}`;
+    };
+
+    const getProductImage = (order: Order) => {
+        const rawData = order.sizes_data || order.size_data || order.size;
+        if (rawData) {
+            try {
+                const parsed = JSON.parse(rawData);
+                const variantList = Array.isArray(parsed?.variants)
+                    ? parsed.variants
+                    : Array.isArray(parsed)
+                    ? parsed
+                    : null;
+                if (variantList && variantList.length > 0) {
+                    const firstWithImg = variantList.find((v: any) => v.colorImg || v.color_img || v.image);
+                    if (firstWithImg) {
+                        const img = firstWithImg.colorImg || firstWithImg.color_img || firstWithImg.image;
+                        const url = getImageUrl(img);
+                        if (url) return url;
+                    }
+                }
+            } catch {}
+        }
+        if (order.product?.image) return getImageUrl(order.product.image);
+        if (order.product?.image_2) return getImageUrl(order.product.image_2);
+        if (order.product?.image_3) return getImageUrl(order.product.image_3);
+        return null;
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,17 +170,24 @@ export default function Dashboard() {
                 if (variantList && variantList.length > 0) {
                     return (
                         <div className="text-xs space-y-1">
-                            {variantList.map((v: any, idx: number) => (
-                                <div key={idx} className="bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded border border-gray-200 dark:border-neutral-700 font-medium flex items-center gap-1.5 flex-wrap">
-                                    {v.color && (
-                                        <span className="font-bold text-gray-900 dark:text-white bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded text-[11px] border border-gray-200 dark:border-neutral-700">
-                                            🎨 {v.color}
-                                        </span>
-                                    )}
-                                    <span>সাইজ: <strong className="text-emerald-600 dark:text-emerald-400">{v.size || 'N/A'}</strong></span>
-                                    <span className="text-gray-500">(পরিমাণ: {v.quantity || v.qty || 1})</span>
-                                </div>
-                            ))}
+                            {variantList.map((v: any, idx: number) => {
+                                const vImg = v.colorImg || v.color_img || v.image;
+                                const vImgUrl = getImageUrl(vImg);
+                                return (
+                                    <div key={idx} className="bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded border border-gray-200 dark:border-neutral-700 font-medium flex items-center gap-1.5 flex-wrap">
+                                        {vImgUrl && (
+                                            <img src={vImgUrl} alt={v.color || 'variant'} className="w-5 h-5 object-cover rounded border border-gray-300 dark:border-neutral-600 shrink-0" />
+                                        )}
+                                        {v.color && (
+                                            <span className="font-bold text-gray-900 dark:text-white bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded text-[11px] border border-gray-200 dark:border-neutral-700">
+                                                🎨 {v.color}
+                                            </span>
+                                        )}
+                                        <span>সাইজ: <strong className="text-emerald-600 dark:text-emerald-400">{v.size || 'N/A'}</strong></span>
+                                        <span className="text-gray-500">(পরিমাণ: {v.quantity || v.qty || 1})</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     );
                 }
@@ -227,10 +262,10 @@ export default function Dashboard() {
                                                     <td className="p-3 font-medium">#{order.id}</td>
                                                     <td className="p-3">
                                                         <div className="flex items-center gap-3">
-                                                            {order.product?.image ? (
+                                                            {getProductImage(order) ? (
                                                                 <img
-                                                                    src={getImageUrl(order.product.image)!}
-                                                                    alt={order.product.name}
+                                                                    src={getProductImage(order)!}
+                                                                    alt={order.product?.name || order.name}
                                                                     className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm shrink-0"
                                                                 />
                                                             ) : (

@@ -51,10 +51,12 @@ class OrderController extends Controller
             'category' => 'required|string|max:255',
             'price' => 'required|numeric',
             'stock' => 'required|integer',
-            'sizes' => 'nullable|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'image_2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'image_3' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'sizes' => 'nullable|string',
+            'offers' => 'nullable|json',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image_2' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image_3' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
         ]);
 
         $imagePath = null;
@@ -68,6 +70,11 @@ class OrderController extends Controller
             $path2 = $request->file('image_2')->store('products', 'public');
             $imagePath2 = '/storage/' . $path2;
         }
+
+        $imagePaths = collect($request->file('images', []))->map(function ($file) {
+            return '/storage/' . $file->store('products', 'public');
+        })->values()->all();
+        $imagePath = $imagePath ?: ($imagePaths[0] ?? null);
 
         $imagePath3 = null;
         if ($request->hasFile('image_3')) {
@@ -84,6 +91,8 @@ class OrderController extends Controller
             'image' => $imagePath,
             'image_2' => $imagePath2,
             'image_3' => $imagePath3,
+            'images' => json_encode($imagePaths),
+            'offers' => $request->filled('offers') ? json_decode($request->offers, true) : [],
         ]);
 
         return redirect()->back()->with('success', 'ok');
@@ -322,6 +331,11 @@ class OrderController extends Controller
             'price' => 'required|numeric',
             'stock' => 'required|integer',
             'sizes' => 'nullable|string',
+            'offers' => 'nullable|json',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image_2' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
+            'image_3' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
         ]);
 
         $data = [
@@ -345,6 +359,16 @@ class OrderController extends Controller
         if ($request->hasFile('image_3')) {
             $path3 = $request->file('image_3')->store('products', 'public');
             $data['image_3'] = '/storage/' . $path3;
+        }
+
+        if ($request->hasFile('images')) {
+            $data['images'] = collect($request->file('images'))->map(function ($file) {
+                return '/storage/' . $file->store('products', 'public');
+            })->values()->all();
+        }
+
+        if ($request->has('offers')) {
+            $data['offers'] = $request->filled('offers') ? json_decode($request->offers, true) : [];
         }
 
         $product->update($data);

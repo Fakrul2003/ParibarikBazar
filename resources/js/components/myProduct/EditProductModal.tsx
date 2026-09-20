@@ -7,7 +7,7 @@ export interface ProductItem {
     name: string;
     category: string;
     price: number;
-    stock: number;
+    stock?: number;
     sizes?: string;
     image?: string;
     image_2?: string;
@@ -23,6 +23,7 @@ interface EditProductModalProps {
 export interface ParsedSize {
     size: string;
     isOutOfStock: boolean;
+    stock?: number;
 }
 
 export function parseProductSizes(sizesStr?: string): ParsedSize[] {
@@ -39,6 +40,7 @@ export function parseProductSizes(sizesStr?: string): ParsedSize[] {
                 return {
                     size: item.size || item.name || '',
                     isOutOfStock: Boolean(item.isOutOfStock || item.outOfStock || item.stock === 0),
+                    stock: item.stock === undefined ? undefined : Number(item.stock),
                 };
             }).filter(s => Boolean(s.size));
         } else if (typeof parsed === 'object' && parsed !== null) {
@@ -47,9 +49,9 @@ export function parseProductSizes(sizesStr?: string): ParsedSize[] {
                     return { size: key, isOutOfStock: val };
                 }
                 if (typeof val === 'object' && val !== null) {
-                    return { size: key, isOutOfStock: Boolean(val.isOutOfStock || val.outOfStock || val.stock === 0) };
+                    return { size: key, isOutOfStock: Boolean(val.isOutOfStock || val.outOfStock || val.stock === 0), stock: val.stock === undefined ? undefined : Number(val.stock) };
                 }
-                return { size: key, isOutOfStock: Number(val) === 0 };
+                return { size: key, isOutOfStock: Number(val) === 0, stock: Number(val) };
             });
         }
     } catch {
@@ -128,7 +130,7 @@ export default function EditProductModal({ product, isOpen, onClose }: EditProdu
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         post(`/admin/product/${product.id}/update`, {
             forceFormData: true,
             preserveScroll: true,

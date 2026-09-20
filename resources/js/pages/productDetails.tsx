@@ -27,6 +27,8 @@ interface Product {
     image: string;
     image_2?: string;
     image_3?: string;
+    images?: string[];
+    offers?: { min: number; max?: number | string; discount: number }[];
     sizes?: string;
 }
 
@@ -67,6 +69,12 @@ export default function ProductDetails({ product, auth }: Props) {
         if (product.image_3) {
             list.push({ id: 'color-3', name: 'Color Option 3', image: getImageUrl(product.image_3) });
         }
+        (product.images || []).forEach((image, index) => {
+            const imageUrl = getImageUrl(image);
+            if (imageUrl && !list.some((item) => item.image === imageUrl)) {
+                list.push({ id: `image-${index}`, name: `Color Option ${list.length + 1}`, image: imageUrl });
+            }
+        });
         if (list.length === 0) {
             list.push({ id: 'color-default', name: 'Standard Color', image: '/placeholder.jpg' });
         }
@@ -146,12 +154,17 @@ export default function ProductDetails({ product, auth }: Props) {
     };
 
     // Bulk tier pricing logic
+    const offers = useMemo(() => (product.offers || []).filter((offer) => Number(offer.min) > 0), [product.offers]);
+
+    const activeOffer = useMemo(() => {
+        return offers.filter((offer) => totalSelectedQty >= Number(offer.min) && (!offer.max || totalSelectedQty <= Number(offer.max)))
+            .sort((a, b) => Number(b.min) - Number(a.min))[0];
+    }, [offers, totalSelectedQty]);
+
     const unitPrice = useMemo(() => {
         const basePrice = Number(product.price || 0);
-        if (totalSelectedQty >= 100) return basePrice * 0.85; // 15% off for 100+ pcs
-        if (totalSelectedQty >= 20) return basePrice * 0.92;  // 8% off for 20-99 pcs
-        return basePrice;
-    }, [product.price, totalSelectedQty]);
+        return activeOffer ? basePrice * (1 - Number(activeOffer.discount || 0) / 100) : basePrice;
+    }, [product.price, activeOffer]);
 
     const totalCalculatedPrice = useMemo(() => {
         return totalSelectedQty * unitPrice;
@@ -332,43 +345,22 @@ export default function ProductDetails({ product, auth }: Props) {
                             </div>
 
                             {/* SECTION 2: Bulk Pricing Tiers Box (Alibaba/Wholesale Style) */}
-                            <div className="bg-gray-50 dark:bg-neutral-850 p-4 rounded-xl border border-gray-200/80 dark:border-neutral-800">
+                            {offers.length > 0 && <div className="bg-gray-50 dark:bg-neutral-850 p-4 rounded-xl border border-gray-200/80 dark:border-neutral-800">
                                 <span className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                                     Bulk Tier Pricing (পাইকারি মূল্য তালিকা)
                                 </span>
                                 <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className={`p-2.5 rounded-lg border transition ${
-                                        totalSelectedQty < 20
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold'
-                                            : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400'
-                                    }`}>
-                                        <p className="text-[11px]">1 - 19 pcs</p>
-                                        <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                                            ৳{product.price}
-                                        </p>
-                                    </div>
-                                    <div className={`p-2.5 rounded-lg border transition ${
-                                        totalSelectedQty >= 20 && totalSelectedQty < 100
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold'
-                                            : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400'
-                                    }`}>
-                                        <p className="text-[11px]">20 - 99 pcs (8% OFF)</p>
-                                        <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                                            ৳{(product.price * 0.92).toFixed(0)}
-                                        </p>
-                                    </div>
-                                    <div className={`p-2.5 rounded-lg border transition ${
-                                        totalSelectedQty >= 100
-                                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold'
-                                            : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400'
-                                    }`}>
-                                        <p className="text-[11px]">100+ pcs (15% OFF)</p>
-                                        <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
-                                            ৳{(product.price * 0.85).toFixed(0)}
-                                        </p>
-                                    </div>
+                                    {offers.map((offer, index) => {
+                                        const label = offer.max ? `${offer.min} - ${offer.max} pcs` : `${offer.min}+ pcs`;
+                                        const price = Number(product.price) * (1 - Number(offer.discount || 0) / 100);
+                                        const isActive = activeOffer === offer;
+                                        return <div key={index} className={`p-2.5 rounded-lg border transition ${isActive ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold' : 'bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400'}`}>
+                                            <p className="text-[11px]">{label} {Number(offer.discount) > 0 ? `(${offer.discount}% OFF)` : ''}</p>
+                                            <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">৳{price.toFixed(0)}</p>
+                                        </div>;
+                                    })}
                                 </div>
-                            </div>
+                            </div>}
 
                             {/* SECTION 3: Size & Quantity Matrix Table */}
                             <div>
@@ -404,7 +396,7 @@ export default function ProductDetails({ product, auth }: Props) {
                                                                     {item.size}
                                                                 </span>
                                                                 <span className={`text-[10px] font-medium ${isOut ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                                                    {isOut ? 'Out of stock' : '99+ in stock'}
+                                                                    {isOut ? 'Out of stock' : `${item.stock ?? 'In'} stock`}
                                                                 </span>
                                                             </div>
                                                         </td>

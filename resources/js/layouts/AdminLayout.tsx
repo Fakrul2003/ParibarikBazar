@@ -36,9 +36,59 @@ export default function AdminLayout({ children, title }: Props) {
     };
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-gray-50/70 font-sans text-gray-900 dark:bg-neutral-950 dark:text-gray-100">
-            {/* Sidebar */}
-            <aside className="w-64 flex-shrink-0 border-r border-gray-200/80 bg-white flex flex-col justify-between dark:border-neutral-800 dark:bg-neutral-900 select-none">
+        <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-gray-50/70 font-sans text-gray-900 dark:bg-neutral-950 dark:text-gray-100">
+            {/* Top Navigation Bar for Mobile / Phone view */}
+            <header className="md:hidden flex-shrink-0 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 z-30 select-none">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-neutral-800/80">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
+                            <Shield className="w-4 h-4" />
+                        </div>
+                        <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">Admin Portal</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href="/"
+                            title="Go to Customer Website"
+                            className="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800 transition"
+                        >
+                            <Home className="w-4 h-4" />
+                        </Link>
+                        <div className="w-7 h-7 rounded-full bg-emerald-700 text-white font-bold flex items-center justify-center text-xs">
+                            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile Underline Navigation Tabs */}
+                <nav className="flex items-center overflow-x-auto no-scrollbar px-2">
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+                        const active = isActive(item.pattern);
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={`relative flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-150 ${
+                                    active
+                                        ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <Icon className={`w-4 h-4 ${active ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                                <span>{item.name}</span>
+                                {active && (
+                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                                )}
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </header>
+
+            {/* Desktop Sidebar (hidden on phone view) */}
+            <aside className="hidden md:flex w-64 flex-shrink-0 border-r border-gray-200/80 bg-white flex-col justify-between dark:border-neutral-800 dark:bg-neutral-900 select-none">
                 <div className="p-6">
                     {/* Portal Brand Logo */}
                     <div className="flex items-center gap-3 mb-8 px-2">
@@ -97,7 +147,7 @@ export default function AdminLayout({ children, title }: Props) {
 
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-               <div className="p-6 md:p-8 flex-1 overflow-hidden">
+               <div className="p-4 sm:p-6 md:p-8 flex-1 overflow-y-auto min-h-0">
                     {children}
                 </div>
             </main>

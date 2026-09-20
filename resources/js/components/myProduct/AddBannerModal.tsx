@@ -27,8 +27,11 @@ export default function AddBannerModal({
                             accept="image/*"
                             onChange={(e) => bannerForm.setData('image', e.target.files ? e.target.files[0] : null)}
                             required
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
+                            className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700 text-sm"
                         />
+                        {bannerForm.errors?.image && (
+                            <p className="text-red-500 text-xs mt-1">{bannerForm.errors.image}</p>
+                        )}
                     </div>
                     <div className="flex justify-end gap-2 mt-6">
                         <button

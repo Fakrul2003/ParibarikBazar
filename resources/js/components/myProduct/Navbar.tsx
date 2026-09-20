@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { Menu, X } from 'lucide-react';
 
 interface NavbarProps {
     auth?: {
@@ -14,6 +15,7 @@ export default function Navbar({ auth }: NavbarProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const [isMoreOpen, setIsMoreOpen] = useState(false); // More ড্রপডাউনের জন্য স্টেট
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
     const moreDropdownRef = useRef<HTMLDivElement>(null); // More ড্রপডাউন রেফারেন্স
@@ -52,10 +54,13 @@ export default function Navbar({ auth }: NavbarProps) {
 
     return (
         <header className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 shadow-sm relative">
+            <button type="button" onClick={() => setIsMobileMenuOpen(true)} className="md:hidden fixed top-3 left-3 z-40 p-2 rounded-lg bg-neutral-900 text-white shadow-lg" aria-label="Open navigation">
+                <Menu className="w-5 h-5" />
+            </button>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <span className="text-2xl font-bold text-green-600">Fakhrul<span className="text-red-700">Mart</span></span>
 
-                <div className="flex-1 max-w-xl mx-8">
+                <div className="hidden md:block flex-1 max-w-xl mx-8">
                     <form onSubmit={handleSearch} className="relative w-full">
                         <input
                             type="text"
@@ -70,7 +75,7 @@ export default function Navbar({ auth }: NavbarProps) {
                     </form>
                 </div>
 
-                <nav className="flex items-center gap-3">
+                <nav className="hidden md:flex items-center gap-3">
                     {auth?.user ? (
                         <div className="flex items-center gap-3">
                             {/* ইউজার প্রোপাইল ড্রপডাউন */}
@@ -166,6 +171,21 @@ export default function Navbar({ auth }: NavbarProps) {
                     )}
                 </nav>
             </div>
+            {isMobileMenuOpen && <div className="md:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setIsMobileMenuOpen(false)}>
+                <aside className="h-full w-72 bg-neutral-900 text-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-8"><strong className="text-xl">Fakhrul<span className="text-red-500">Mart</span></strong><button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close navigation"><X /></button></div>
+                    <form onSubmit={handleSearch} className="mb-6"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search products..." className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-sm" /></form>
+                    <div className="space-y-1 text-sm">
+                        <Link href="/" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">Home</Link>
+                        {auth?.user && <Link href="/dashboard" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">Dashboard</Link>}
+                        <Link href="/about" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">About Us</Link>
+                        <Link href="/wishlists" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">Wishlists</Link>
+                        <Link href="/faqs" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">FAQs</Link>
+                        <a href="tel:+8801987668401" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">Call Us</a>
+                        <a href="https://wa.me/+8801987668401" className="block px-3 py-3 rounded-lg hover:bg-neutral-800">WhatsApp</a>
+                    </div>
+                </aside>
+            </div>}
         </header>
     );
 }

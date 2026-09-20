@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/AdminLayout';
 import { MessageSquare, Send, Image as ImageIcon, Search, X } from 'lucide-react';
 
@@ -34,6 +34,8 @@ interface Props {
 }
 
 export default function Messages({ customers = [], activeUserId, messages = [] }: Props) {
+    const { props } = usePage();
+    const currentUserId = props.auth?.user?.id as number | undefined;
     const [searchTerm, setSearchTerm] = useState('');
     const [replyText, setReplyText] = useState('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -109,7 +111,7 @@ export default function Messages({ customers = [], activeUserId, messages = [] }
                 <p className="text-sm text-gray-500 dark:text-gray-400">Direct inquiries and customer support communication with image attachment support.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200/80 dark:border-neutral-800 overflow-hidden shadow-xs h-[calc(100vh-150px)]">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200/80 dark:border-neutral-800 overflow-hidden shadow-xs h-[calc(100vh-150px)] min-h-0">
 
                 {/* Left Inbox List */}
                 <div className="md:col-span-4 border-r border-gray-100 dark:border-neutral-800 flex flex-col">
@@ -164,7 +166,7 @@ export default function Messages({ customers = [], activeUserId, messages = [] }
 
                 {/* Right Chat Thread */}
                 {activeCustomer ? (
-                    <div className="md:col-span-8 flex flex-col h-full min-h-0">
+                    <div className="md:col-span-8 flex flex-col h-full min-h-0 overflow-hidden">
                         <div className="p-4 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-3 bg-gray-50/40 dark:bg-neutral-900">
                             <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
                                 {activeCustomer.avatar}
@@ -179,7 +181,7 @@ export default function Messages({ customers = [], activeUserId, messages = [] }
                         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 bg-gray-50/40 dark:bg-neutral-950/40">
                             {messages && messages.length > 0 ? (
                                 messages.map((msg) => {
-                                    const isAdminMessage = msg.sender?.role === 'admin' || msg.sender_id !== activeCustomer.id;
+                                    const isAdminMessage = currentUserId ? msg.sender_id === currentUserId : msg.sender?.role === 'admin';
                                     return (
                                         <div
                                             key={msg.id}

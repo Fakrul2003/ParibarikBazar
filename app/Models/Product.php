@@ -18,5 +18,12 @@ class Product extends Model
         'image',
         'image_2', // নতুন যোগ করুন
         'image_3',
+        'images',
+        'offers',
+    ];
+
+    protected $casts = [
+        'images' => 'array',
+        'offers' => 'array',
     ];
 }

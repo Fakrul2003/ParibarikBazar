@@ -22,6 +22,13 @@ interface ProductCardProps {
     isAdmin?: boolean;
 }
 
+const resolveProductImageUrl = (image?: string) => {
+    if (!image) return 'https://via.placeholder.com/600x600?text=No+Image';
+    if (image.startsWith('http') || image.startsWith('/')) return image;
+    if (image.startsWith('storage/')) return `/${image}`;
+    return `/storage/${image}`;
+};
+
 export default function ProductCard({ product, auth, isAdmin = true }: ProductCardProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -58,7 +65,7 @@ export default function ProductCard({ product, auth, isAdmin = true }: ProductCa
 
     return (
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-xl shadow-xs flex flex-col justify-between relative group">
-            
+
             {/* ৩-ডট (3-dots) মেনু এডমিনদের জন্য */}
             {checkIsAdmin && (
                 <div className="absolute top-2 right-2 z-20" ref={menuRef}>
@@ -103,9 +110,12 @@ export default function ProductCard({ product, auth, isAdmin = true }: ProductCa
             <div>
                 <Link href={`/product/${product.id}`} className="block group overflow-hidden rounded-t-xl">
                     <img
-                        src={product.image ? `${product.image}` : 'https://via.placeholder.com/150'}
+                        src={resolveProductImageUrl(product.image)}
                         alt={product.name}
                         className="w-full h-52 object-cover rounded-t-xl group-hover:scale-105 transition duration-300"
+                        onError={(event) => {
+                            event.currentTarget.src = 'https://via.placeholder.com/600x600?text=No+Image';
+                        }}
                     />
                 </Link>
 
@@ -129,20 +139,24 @@ export default function ProductCard({ product, auth, isAdmin = true }: ProductCa
             </div>
 
             {/* অর্ডার মোডাল */}
-            <OrderModal
-                product={product}
-                isOpen={isOpen}
-                setIsOpen={setIsOpen}
-                auth={auth}
-                initialQuantity={1}
-            />
+           {isOpen && (
+                <OrderModal
+                    product={product}
+                    isOpen={isOpen}
+                    setIsOpen={setIsOpen}
+                    auth={auth}
+                    initialQuantity={1}
+                />
+            )}
 
             {/* এডমিন এডিট মোডাল */}
-            <EditProductModal
-                product={product}
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-            />
+           {isEditModalOpen && (
+                <EditProductModal
+                    product={product}
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                />
+           )}
         </div>
     );
 }

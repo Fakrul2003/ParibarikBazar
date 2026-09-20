@@ -20,11 +20,7 @@ export default defineConfig({
         inertia({
             ssr: false,
         }),
-        react({
-            babel: {
-                plugins: ['babel-plugin-react-compiler'],
-            },
-        }),
+        react(),
         tailwindcss(),
         wayfinder({
             formVariants: true,

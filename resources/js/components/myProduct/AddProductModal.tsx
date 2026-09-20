@@ -1,4 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Trash2, Upload } from 'lucide-react';
+
+interface Offer {
+    min: string;
+    max: string;
+    discount: string;
+}
+
+interface SizeRow {
+    size: string;
+    stock: string;
+}
 
 interface AddProductModalProps {
     isOpen: boolean;
@@ -19,6 +31,37 @@ export default function AddProductModal({
     processing,
     modalRef
 }: AddProductModalProps) {
+    const [sizeRows, setSizeRows] = useState<SizeRow[]>([]);
+    const [sizeInput, setSizeInput] = useState('');
+    const [stockInput, setStockInput] = useState('');
+    const [offers, setOffers] = useState<Offer[]>([
+        { min: '1', max: '19', discount: '0' },
+        { min: '20', max: '99', discount: '8' },
+        { min: '100', max: '', discount: '15' },
+    ]);
+
+    useEffect(() => {
+        setData('offers', JSON.stringify(offers));
+    }, [offers]);
+
+    const syncSizes = (rows: SizeRow[]) => setData('sizes', JSON.stringify(rows));
+
+    const addSize = () => {
+        const size = sizeInput.trim();
+        if (!size || sizeRows.some((row) => row.size.toLowerCase() === size.toLowerCase())) return;
+        const rows = [...sizeRows, { size, stock: stockInput || '0' }];
+        setSizeRows(rows);
+        syncSizes(rows);
+        setSizeInput('');
+        setStockInput('');
+    };
+
+    const removeSize = (index: number) => {
+        const rows = sizeRows.filter((_, rowIndex) => rowIndex !== index);
+        setSizeRows(rows);
+        syncSizes(rows);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -73,44 +116,44 @@ export default function AddProductModal({
                         />
                     </div>
 
-                     <div>
-    <label className="block text-sm font-medium mb-1">সাইজ (Sizes - ঐচ্ছিক)</label>
-    <input
-        type="text"
-        value={data.sizes}
-        onChange={(e) => setData('sizes', e.target.value)}
-        placeholder="যেমন: 39, 40, 41 বা S, M, L"
-        className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
-    />
-</div>
+                    <div className="rounded-lg border border-gray-200 dark:border-neutral-700 p-3 space-y-3">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">সাইজ ও স্টক</label>
+                            <div className="grid grid-cols-[1fr_90px_auto] gap-2">
+                                <input value={sizeInput} onChange={(e) => setSizeInput(e.target.value)} placeholder="যেমন 39 বা XL" className="px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700" />
+                                <input type="number" min="0" value={stockInput} onChange={(e) => setStockInput(e.target.value)} placeholder="স্টক" className="px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700" />
+                                <button type="button" onClick={addSize} className="px-3 rounded-lg bg-emerald-600 text-white"><Plus className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+                        {sizeRows.map((row, index) => (
+                            <div key={row.size} className="flex items-center justify-between rounded bg-gray-50 dark:bg-neutral-800 px-3 py-2 text-sm">
+                                <span>সাইজ: <strong>{row.size}</strong> | স্টক: <strong>{row.stock}</strong></span>
+                                <button type="button" onClick={() => removeSize(index)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 dark:border-neutral-700 p-3 space-y-2">
+                        <label className="block text-sm font-medium">Bulk offer (ঐচ্ছিক)</label>
+                        {offers.map((offer, index) => (
+                            <div key={index} className="grid grid-cols-[1fr_1fr_90px_auto] gap-2 items-center">
+                                <input type="number" min="1" value={offer.min} placeholder="শুরু" onChange={(e) => setOffers((rows) => rows.map((row, i) => i === index ? { ...row, min: e.target.value } : row))} className="px-2 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700" />
+                                <input type="number" min="1" value={offer.max} placeholder="শেষ (ঐচ্ছিক)" onChange={(e) => setOffers((rows) => rows.map((row, i) => i === index ? { ...row, max: e.target.value } : row))} className="px-2 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700" />
+                                <input type="number" min="0" max="100" value={offer.discount} placeholder="ছাড় %" onChange={(e) => setOffers((rows) => rows.map((row, i) => i === index ? { ...row, discount: e.target.value } : row))} className="px-2 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700" />
+                                <button type="button" onClick={() => setOffers((rows) => rows.filter((_, i) => i !== index))} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                        ))}
+                        <button type="button" onClick={() => setOffers((rows) => [...rows, { min: '', max: '', discount: '' }])} className="text-xs text-emerald-600 font-semibold">+ Offer যোগ করুন</button>
+                    </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1">প্রধান ছবি (Image 1)</label>
+                        <label className="block text-sm font-medium mb-1"><Upload className="inline w-4 h-4 mr-1" />ছবি আপলোড করুন (যত ইচ্ছা)</label>
                         <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => setData('image', e.target.files ? e.target.files[0] : null)}
+                            multiple
+                            onChange={(e) => setData('images', e.target.files ? Array.from(e.target.files) : [])}
                             required
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">দ্বিতীয় ছবি (Image 2)</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setData('image_2', e.target.files ? e.target.files[0] : null)}
-                            className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">তৃতীয় ছবি (Image 3)</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setData('image_3', e.target.files ? e.target.files[0] : null)}
                             className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
                         />
                     </div>

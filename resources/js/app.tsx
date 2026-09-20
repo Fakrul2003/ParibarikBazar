@@ -8,6 +8,12 @@ import SettingsLayout from '@/layouts/settings/layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+declare global {
+    interface Window {
+        __inertia_app_bootstrapped?: boolean;
+    }
+}
+
 function ClientToaster() {
     const [Toaster, setToaster] = useState<React.ComponentType | null>(null);
 
@@ -20,49 +26,51 @@ function ClientToaster() {
     return Toaster ? <Toaster /> : null;
 }
 
-createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
-    layout: (name) => {
-        switch (true) {
-            case name === 'welcome':
-                return null;
-            case name.startsWith('auth/'):
-                return AuthLayout;
-            case name.startsWith('settings/'):
-                return [AppLayout, SettingsLayout];
-            case name.startsWith('admin/'):
-                return null;
-           case name === 'productDetails':
-            return null;
-             case name === 'dashboard':
-            return null;
-           case name === 'navOption/About':
-            return null;
-             case name === 'navOption/Faqs':
-            return null;
-            case name === 'navOption/Wishlists':
-            return null;
-            case name === 'Category/Show':
-            return null;
-
-
+if (!window.__inertia_app_bootstrapped) {
+    createInertiaApp({
+        title: (title) => (title ? `${title} - ${appName}` : appName),
+        layout: (name) => {
+            switch (true) {
+                case name === 'welcome':
+                    return null;
+                case name.startsWith('auth/'):
+                    return AuthLayout;
+                case name.startsWith('settings/'):
+                    return [AppLayout, SettingsLayout];
+                case name.startsWith('admin/'):
+                    return null;
+                case name === 'productDetails':
+                    return null;
+                case name === 'dashboard':
+                    return null;
+                case name === 'navOption/About':
+                    return null;
+                case name === 'navOption/Faqs':
+                    return null;
+                case name === 'navOption/Wishlists':
+                    return null;
+                case name === 'Category/Show':
+                    return null;
                 default:
-                return AppLayout;
-        }
-    },
-    strictMode: true,
-    withApp(app) {
-        return (
-            <TooltipProvider delayDuration={0}>
-                {app}
-                <ClientToaster />
-            </TooltipProvider>
-        );
-    },
-    progress: {
-        color: '#4B5563',
-    },
-});
+                    return AppLayout;
+            }
+        },
+        strictMode: true,
+        withApp(app) {
+            return (
+                <TooltipProvider delayDuration={0}>
+                    {app}
+                    <ClientToaster />
+                </TooltipProvider>
+            );
+        },
+        progress: {
+            color: '#4B5563',
+        },
+    });
+
+    window.__inertia_app_bootstrapped = true;
+}
 
 // This will set light / dark mode on load...
 initializeTheme();

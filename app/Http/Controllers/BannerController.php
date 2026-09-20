@@ -14,16 +14,15 @@ class BannerController extends Controller
     {
         // ভ্যালিডেশন
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp,avif|max:10240',
         ]);
 
         if ($request->hasFile('image')) {
             // 'banners' ফোল্ডারে ইমেজটি স্টোরেজে সেভ করা হচ্ছে
             $path = $request->file('image')->store('banners', 'public');
 
-
             Banner::create([
-                'image' => $path,
+                'image' => '/storage/' . $path,
             ]);
 
             return redirect()->back()->with('success', 'ব্যানার সফলভাবে আপলোড করা হয়েছে!');

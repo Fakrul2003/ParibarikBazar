@@ -11,6 +11,13 @@ interface BannerSliderProps {
     onOpenBannerModal: () => void;
 }
 
+const resolveBannerImageUrl = (image?: string) => {
+    if (!image) return 'https://placehold.co/1200x400/1f2937/ffffff?text=No+Banner';
+    if (image.startsWith('http') || image.startsWith('/')) return image;
+    if (image.startsWith('storage/')) return `/${image}`;
+    return `/storage/${image}`;
+};
+
 export default function BannerSlider({ banners, isAdmin, onOpenBannerModal }: BannerSliderProps) {
     const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -28,9 +35,12 @@ export default function BannerSlider({ banners, isAdmin, onOpenBannerModal }: Ba
             {banners.length > 0 ? (
                 <>
                     <img
-                       src={banners[currentSlide].image}
+                        src={resolveBannerImageUrl(banners[currentSlide]?.image)}
                         alt="Banner"
                         className="w-full h-full object-cover transition-all duration-500"
+                        onError={(event) => {
+                            event.currentTarget.src = 'https://placehold.co/1200x400/e5e7eb/6b7280?text=No+Banner';
+                        }}
                     />
 
                     {/* বাম দিকের অ্যারো বাটন */}
