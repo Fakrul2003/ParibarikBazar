@@ -66,8 +66,8 @@ interface PageProps extends Record<string, unknown> {
 
 export default function Dashboard() {
     const { auth, orders, messages = [] } = usePage<PageProps>().props;
-   //     const isAdmin = true;
-    const isAdmin = auth?.user && auth.user.role === 'admin';
+    const isAdmin = true;
+    //    const isAdmin = auth?.user && auth.user.role === 'admin';
 
     const [messageText, setMessageText] = useState('');
     const [selectedImage, setSelectedImage] = useState<File | null>(null);

@@ -80,6 +80,7 @@ export default function EditProductModal({ product, isOpen, onClose }: EditProdu
         image: null as File | null,
         image_2: null as File | null,
         image_3: null as File | null,
+        images: [] as File[],
     });
 
     useEffect(() => {
@@ -95,6 +96,7 @@ export default function EditProductModal({ product, isOpen, onClose }: EditProdu
                 image: null,
                 image_2: null,
                 image_3: null,
+                images: [],
             });
         }
     }, [product?.id, product?.sizes, product?.name, product?.price, product?.stock, isOpen]);
@@ -301,6 +303,17 @@ export default function EditProductModal({ product, isOpen, onClose }: EditProdu
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setData('image_3', e.target.files ? e.target.files[0] : null)}
+                                className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold mb-1">অতিরিক্ত ছবি (একাধিক নির্বাচন করা যাবে)</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => setData('images', e.target.files ? Array.from(e.target.files) : [])}
                                 className="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700"
                             />
                         </div>

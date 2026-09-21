@@ -37,7 +37,7 @@ class OrderController extends Controller
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('category', 'like', "%{$searchTerm}%");
+                ->orWhere('category', 'like', "%{$searchTerm}%");
         }
 
         return $query->get();
@@ -218,7 +218,7 @@ class OrderController extends Controller
             $userMsgs = $threads->get($customer->id);
             $lastMsg = $userMsgs ? $userMsgs->last() : null;
 
-            $unreadCount = $userMsgs ? $userMsgs->where('is_read', false)->filter(function($msg) {
+            $unreadCount = $userMsgs ? $userMsgs->where('is_read', false)->filter(function ($msg) {
                 return $msg->sender_id !== Auth::id();
             })->count() : 0;
 

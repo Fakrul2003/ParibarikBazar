@@ -43,6 +43,18 @@ interface ColorOption {
     image: string;
 }
 
+const normalizeProductImages = (images: Product['images']): string[] => {
+    if (Array.isArray(images)) return images.filter((image): image is string => typeof image === 'string');
+    if (typeof images !== 'string') return [];
+
+    try {
+        const parsed = JSON.parse(images);
+        return Array.isArray(parsed) ? parsed.filter((image): image is string => typeof image === 'string') : [];
+    } catch {
+        return [];
+    }
+};
+
 export default function ProductDetails({ product, auth }: Props) {
     const [isOpen, setIsOpen] = useState(false);
     const [showWhatsApp, setShowWhatsApp] = useState(false);
@@ -69,7 +81,7 @@ export default function ProductDetails({ product, auth }: Props) {
         if (product.image_3) {
             list.push({ id: 'color-3', name: 'Color Option 3', image: getImageUrl(product.image_3) });
         }
-        (product.images || []).forEach((image, index) => {
+        normalizeProductImages(product.images).forEach((image, index) => {
             const imageUrl = getImageUrl(image);
             if (imageUrl && !list.some((item) => item.image === imageUrl)) {
                 list.push({ id: `image-${index}`, name: `Color Option ${list.length + 1}`, image: imageUrl });

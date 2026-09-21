@@ -152,7 +152,13 @@ export default function AddProductModal({
                             type="file"
                             accept="image/*"
                             multiple
-                            onChange={(e) => setData('images', e.target.files ? Array.from(e.target.files) : [])}
+                            onChange={(e) => {
+                                const files = e.target.files ? Array.from(e.target.files) : [];
+                                setData('image', files[0] ?? null);
+                                setData('image_2', files[1] ?? null);
+                                setData('image_3', files[2] ?? null);
+                                setData('images', files.slice(3));
+                            }}
                             required
                             className="w-full px-3 py-2 border rounded-lg dark:bg-neutral-800 dark:border-neutral-700"
                         />

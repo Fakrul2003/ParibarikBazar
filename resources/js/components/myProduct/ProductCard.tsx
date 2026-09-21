@@ -1,6 +1,5 @@
 import { Link, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
-import OrderModal from '@/components/myProduct/OrderModal';
 import EditProductModal from '@/components/myProduct/EditProductModal';
 import { MoreVertical, Edit, Trash2 } from 'lucide-react';
 
@@ -30,7 +29,6 @@ const resolveProductImageUrl = (image?: string) => {
 };
 
 export default function ProductCard({ product, auth, isAdmin = true }: ProductCardProps) {
-    const [isOpen, setIsOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -108,7 +106,7 @@ export default function ProductCard({ product, auth, isAdmin = true }: ProductCa
             )}
 
             <div>
-                <Link href={`/product/${product.id}`} className="block group overflow-hidden rounded-t-xl">
+                <Link href={`/products/${product.id}`} className="block group overflow-hidden rounded-t-xl">
                     <img
                         src={resolveProductImageUrl(product.image)}
                         alt={product.name}
@@ -120,34 +118,15 @@ export default function ProductCard({ product, auth, isAdmin = true }: ProductCa
                 </Link>
 
                 <div className="p-3">
-                    <Link href={`/product/${product.id}`} className="block">
+                    <Link href={`/products/${product.id}`} className="block">
                         <h3 className="font-bold text-base text-gray-900 dark:text-white hover:text-green-600 transition line-clamp-1">
                             {product.name}
                         </h3>
                     </Link>
 
                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-base mt-1">৳ {product.price}</p>
-
-                    <button
-                        type="button"
-                        onClick={() => setIsOpen(true)}
-                        className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition cursor-pointer shadow-sm text-sm"
-                    >
-                        Buy Now
-                    </button>
                 </div>
             </div>
-
-            {/* অর্ডার মোডাল */}
-           {isOpen && (
-                <OrderModal
-                    product={product}
-                    isOpen={isOpen}
-                    setIsOpen={setIsOpen}
-                    auth={auth}
-                    initialQuantity={1}
-                />
-            )}
 
             {/* এডমিন এডিট মোডাল */}
            {isEditModalOpen && (

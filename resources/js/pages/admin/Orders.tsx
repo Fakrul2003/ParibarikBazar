@@ -49,7 +49,6 @@ interface OrderItem {
         image_3?: string;
         sizes?: string;
     };
-    // গ্রুপ অর্ডারের জন্য অতিরিক্ত প্রপার্টি
     products?: any[];
     order_ids?: number[];
 }
@@ -73,7 +72,6 @@ export default function Orders({ orders }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const { url } = usePage();
 
-    // ১. একই গ্রাহকের আনডেলিভারড অর্ডারগুলোকে একত্রিত করার লজিক (Group Orders by Phone & Active Status)
     const getGroupedOrders = (rawOrders: OrderItem[]) => {
         if (!rawOrders || !Array.isArray(rawOrders)) return [];
 
@@ -150,13 +148,11 @@ export default function Orders({ orders }: Props) {
         return () => window.removeEventListener('resize', updateLayoutMode);
     }, []);
 
-    // Scroll to the targeted order when page loads or URL changes with ?order=id
     useEffect(() => {
         if (requestedOrderId) {
             setSelectedOrderId(requestedOrderId);
             setExpandedMobileOrderId(requestedOrderId);
 
-            // Wait a tick for rendering, then smooth scroll into view
             const timer = setTimeout(() => {
                 const el = orderItemRefs.current[requestedOrderId];
                 if (el) {
@@ -191,9 +187,6 @@ export default function Orders({ orders }: Props) {
     const activeOrder = groupedOrders.find((o) =>
         o.id === selectedOrderId || o.order_ids?.includes(selectedOrderId || 0)
     ) || filteredOrders[0] || null;
-    const mobileDetailOrder = expandedMobileOrderId
-        ? groupedOrders.find((o) => o.id === expandedMobileOrderId || o.order_ids?.includes(expandedMobileOrderId)) || null
-        : null;
 
     const getImageUrl = (img?: string) => {
         if (!img) return null;
@@ -295,7 +288,45 @@ export default function Orders({ orders }: Props) {
         }] : [];
     };
 
-    const renderOrderDetailPanel = (order: OrderItem | null) => {
+    // অর্ডারের গ্রাহক তথ্য (Customer Info Card)
+    const renderCustomerInfoBlock = (order: OrderItem) => (
+        <div className="p-4 bg-gray-50/70 dark:bg-neutral-800/40 rounded-xl border border-gray-200/70 dark:border-neutral-700/70 space-y-3">
+            <div className="flex items-center justify-between">
+                <h3 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" /> Customer Info
+                </h3>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/50">
+                    {order.order_ids?.length || 1} Order(s) Grouped
+                </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shrink-0 shadow-xs">
+                    {(order.name || 'C').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{order.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 shrink-0 text-gray-400" />
+                        <span className="truncate">{order.address}</span>
+                    </p>
+                </div>
+            </div>
+
+            <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-300 pt-2 border-t border-gray-200/60 dark:border-neutral-700/60">
+                <p className="flex items-center gap-2 truncate">
+                    <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span>{order.user?.email || 'customer@example.com'}</span>
+                </p>
+                <p className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <span>Phone: <strong>{order.phone}</strong></span>
+                </p>
+            </div>
+        </div>
+    );
+
+    const renderOrderDetailPanel = (order: OrderItem | null, isMobileView: boolean = false) => {
         if (!order) {
             return (
                 <div className="p-8 bg-white dark:bg-neutral-900 rounded-2xl text-center border border-gray-200 text-gray-400">
@@ -305,11 +336,11 @@ export default function Orders({ orders }: Props) {
         }
 
         return (
-            <div className="p-6 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200/80 dark:border-neutral-800 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-5 border-b border-gray-100 dark:border-neutral-800">
+            <div className={`p-4 md:p-6 bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200/80 dark:border-neutral-800 shadow-xs space-y-5`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-neutral-800">
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
                                 {order.order_ids && order.order_ids.length > 1
                                     ? `Orders #${order.order_ids.join(', #')}`
                                     : `Order #${order.id}`}
@@ -338,7 +369,7 @@ export default function Orders({ orders }: Props) {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-xl text-xs font-semibold transition cursor-pointer border border-emerald-200/50"
                         >
                             <Printer className="w-3.5 h-3.5" />
-                            <span>Print Order</span>
+                            <span>Print</span>
                         </button>
                         <button
                             type="button"
@@ -346,24 +377,31 @@ export default function Orders({ orders }: Props) {
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 rounded-xl text-xs font-semibold transition cursor-pointer border border-red-200/50"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete Order</span>
+                            <span>Delete</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="space-y-4 mb-6">
+                {/* মোবাইল ভিউতে Customer Info সবার উপরে প্রদর্শিত হবে */}
+                {isMobileView && renderCustomerInfoBlock(order)}
+
+                {/* প্রোডাক্ট তালিকা */}
+                <div className="space-y-3">
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Order Items
+                    </h3>
                     {order.products && order.products.length > 0 ? (
                         order.products.map((prod, idx) => (
-                            <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50/70 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800 gap-4">
-                                <div className="flex items-start gap-3.5 min-w-0 w-full">
+                            <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-gray-50/70 dark:bg-neutral-800/50 rounded-xl border border-gray-100 dark:border-neutral-800 gap-3">
+                                <div className="flex items-start gap-3 min-w-0 w-full">
                                     {prod.image ? (
                                         <img
                                             src={getImageUrl(prod.image)!}
                                             alt={prod.name}
-                                            className="w-14 h-14 object-cover rounded-xl border border-gray-200 dark:border-neutral-700 shrink-0 mt-0.5"
+                                            className="w-12 h-12 object-cover rounded-xl border border-gray-200 dark:border-neutral-700 shrink-0 mt-0.5"
                                         />
                                     ) : (
-                                        <div className="w-14 h-14 bg-gray-200 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
+                                        <div className="w-12 h-12 bg-gray-200 dark:bg-neutral-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
                                             No Img
                                         </div>
                                     )}
@@ -371,57 +409,52 @@ export default function Orders({ orders }: Props) {
                                         <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
                                             {prod.name || 'Default Product'}
                                         </p>
-                                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
                                             SKU: PRD-{prod.id || idx}
                                         </p>
 
-                                        <div className="mt-2.5 space-y-1.5">
+                                        <div className="mt-2 space-y-1">
                                             {getParsedSizesList(prod.size_data, prod.size, prod).map((item, sIdx) => (
                                                 <div
                                                     key={sIdx}
-                                                    className="flex items-center gap-2 p-1.5 bg-white dark:bg-neutral-900 rounded-lg border border-gray-200/80 dark:border-neutral-700/80 text-xs shadow-2xs"
+                                                    className="flex items-center gap-2 p-1 bg-white dark:bg-neutral-900 rounded-lg border border-gray-200/80 dark:border-neutral-700/80 text-[11px]"
                                                 >
                                                     {item.colorImg ? (
                                                         <img
                                                             src={item.colorImg}
                                                             alt={item.color || 'variant'}
-                                                            className="w-7 h-7 object-cover rounded-md border border-gray-200 dark:border-neutral-700 shrink-0"
+                                                            className="w-6 h-6 object-cover rounded border border-gray-200 dark:border-neutral-700 shrink-0"
                                                         />
                                                     ) : (
-                                                        <div className="w-7 h-7 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                        <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-[9px] font-bold shrink-0">
                                                             🎨
                                                         </div>
                                                     )}
-                                                    <div className="flex-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+                                                    <div className="flex-1 flex flex-wrap items-center gap-x-2 min-w-0">
                                                         {item.color && (
                                                             <span className="font-semibold text-gray-900 dark:text-white">
-                                                                কালার: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{item.color}</span>
+                                                                কালার: <span className="text-emerald-600 dark:text-emerald-400">{item.color}</span>
                                                             </span>
                                                         )}
                                                         <span className="text-gray-600 dark:text-gray-300">
-                                                            সাইজ: <strong className="text-gray-900 dark:text-white">{item.size}</strong>
+                                                            সাইজ: <strong>{item.size}</strong>
                                                         </span>
                                                         <span className="font-bold text-emerald-700 dark:text-emerald-400">
                                                             (পরিমাণ: {item.qty})
                                                         </span>
                                                     </div>
-                                                    {item.price && (
-                                                        <span className="font-bold text-gray-900 dark:text-white shrink-0 pr-1">
-                                                            ৳ {Number(item.price) * Number(item.qty || 1)}
-                                                        </span>
-                                                    )}
                                                 </div>
                                             ))}
                                         </div>
 
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                            Total Quantity: <span className="font-semibold text-gray-700 dark:text-gray-300">{prod.quantity}</span>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                                            Total Qty: <span className="font-semibold text-gray-700 dark:text-gray-300">{prod.quantity}</span>
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 dark:border-neutral-700">
-                                    <span className="font-bold text-base text-gray-900 dark:text-white">
+                                    <span className="font-bold text-sm text-gray-900 dark:text-white">
                                         ৳ {prod.total_price}
                                     </span>
                                 </div>
@@ -434,7 +467,8 @@ export default function Orders({ orders }: Props) {
                     )}
                 </div>
 
-                <div className="pt-4 border-t border-gray-100 dark:border-neutral-800 space-y-2 text-sm">
+                {/* হিসেব নিকেশ */}
+                <div className="pt-3 border-t border-gray-100 dark:border-neutral-800 space-y-1.5 text-xs md:text-sm">
                     <div className="flex justify-between text-gray-500 dark:text-gray-400">
                         <span>Subtotal:</span>
                         <span className="font-semibold text-gray-800 dark:text-gray-200">৳ {order.total_price}</span>
@@ -443,11 +477,7 @@ export default function Orders({ orders }: Props) {
                         <span>Shipping:</span>
                         <span className="font-semibold text-gray-800 dark:text-gray-200">৳ 60.00</span>
                     </div>
-                    <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                        <span>Sales tax:</span>
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">৳ 0.00</span>
-                    </div>
-                    <div className="flex justify-between text-base font-bold text-gray-900 dark:text-white pt-2 border-t border-gray-100 dark:border-neutral-800">
+                    <div className="flex justify-between font-bold text-sm md:text-base text-gray-900 dark:text-white pt-2 border-t border-gray-100 dark:border-neutral-800">
                         <span>Total:</span>
                         <span className="text-emerald-600 dark:text-emerald-400">৳ {(Number(order.total_price || 0) + 60).toFixed(2)}</span>
                     </div>
@@ -466,12 +496,26 @@ export default function Orders({ orders }: Props) {
             </div>
 
             {isMobileLayout ? (
+                /* মোবাইল ভিউ: প্রতি কার্ডে টগল হয়ে Customer Info ও অর্ডারের বিশদ তথ্য দেখাবে */
                 <div className="space-y-4 min-h-0">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="relative flex-1">
+                            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Search order, customer..."
+                                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-xs"
+                            />
+                        </div>
+                    </div>
+
                     <div className="space-y-3.5">
                         {filteredOrders.length > 0 ? (
                             filteredOrders.map((order) => {
-                                const isSelected = selectedOrderId === order.id || activeOrder?.id === order.id;
-                                const isExpanded = expandedMobileOrderId === order.id || (expandedMobileOrderId === null && isSelected);
+                                const isSelected = selectedOrderId === order.id;
+                                const isExpanded = expandedMobileOrderId === order.id;
                                 const statusUpper = (order.status || 'PENDING').toUpperCase();
                                 const displayIds = order.order_ids && order.order_ids.length > 1
                                     ? `Orders #${order.order_ids.join(', #')}`
@@ -530,34 +574,15 @@ export default function Orders({ orders }: Props) {
                                                         {order.address} · {new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </p>
                                                 </div>
+                                                <div className="text-gray-400">
+                                                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center justify-between mb-4 pt-2 border-t border-gray-100 dark:border-neutral-800/80">
-                                                <div className="flex items-center -space-x-2 overflow-hidden">
-                                                    {order.products && order.products.length > 0 ? (
-                                                        order.products.map((p, idx) => (
-                                                            <img
-                                                                key={idx}
-                                                                src={getImageUrl(p.image) || ''}
-                                                                alt={p.name || 'product'}
-                                                                className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover"
-                                                            />
-                                                        ))
-                                                    ) : order.product?.image ? (
-                                                        <img
-                                                            src={getImageUrl(order.product.image)!}
-                                                            alt={order.product.name}
-                                                            className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-gray-500 ring-2 ring-white">
-                                                            P
-                                                        </div>
-                                                    )}
-                                                    <span className="text-[10px] text-gray-500 font-medium pl-4">
-                                                        {order.products?.length || 1} item(s)
-                                                    </span>
-                                                </div>
+                                                <span className="text-[10px] text-gray-500 font-medium">
+                                                    {order.products?.length || 1} item(s)
+                                                </span>
                                                 <span className="font-bold text-sm text-gray-900 dark:text-white">
                                                     ৳ {order.total_price}
                                                 </span>
@@ -581,9 +606,10 @@ export default function Orders({ orders }: Props) {
                                             </div>
                                         </div>
 
+                                        {/* মোবাইলে কলাপ্স হয়ে নিচে ওপেন হওয়া অংশ (Customer Info সহ) */}
                                         {isExpanded && (
                                             <div className="border-t border-gray-200 dark:border-neutral-800 bg-gray-50/40 dark:bg-neutral-950/50 p-2">
-                                                {renderOrderDetailPanel(order)}
+                                                {renderOrderDetailPanel(order, true)}
                                             </div>
                                         )}
                                     </div>
@@ -597,6 +623,7 @@ export default function Orders({ orders }: Props) {
                     </div>
                 </div>
             ) : (
+                /* ডেস্কটপ ভিউ: ৩ কলাম লেআউট */
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start min-h-0">
                     <div className="xl:col-span-4 space-y-4 min-h-0">
                         <div className="flex items-center gap-2">
@@ -680,31 +707,9 @@ export default function Orders({ orders }: Props) {
                                             </div>
 
                                             <div className="flex items-center justify-between mb-4 pt-2 border-t border-gray-100 dark:border-neutral-800/80">
-                                                <div className="flex items-center -space-x-2 overflow-hidden">
-                                                    {order.products && order.products.length > 0 ? (
-                                                        order.products.map((p, idx) => (
-                                                            <img
-                                                                key={idx}
-                                                                src={getImageUrl(p.image) || ''}
-                                                                alt={p.name || 'product'}
-                                                                className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover"
-                                                            />
-                                                        ))
-                                                    ) : order.product?.image ? (
-                                                        <img
-                                                            src={getImageUrl(order.product.image)!}
-                                                            alt={order.product.name}
-                                                            className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-neutral-900 object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-gray-500 ring-2 ring-white">
-                                                            P
-                                                        </div>
-                                                    )}
-                                                    <span className="text-[10px] text-gray-500 font-medium pl-4">
-                                                        {order.products?.length || 1} item(s)
-                                                    </span>
-                                                </div>
+                                                <span className="text-[10px] text-gray-500 font-medium">
+                                                    {order.products?.length || 1} item(s)
+                                                </span>
                                                 <span className="font-bold text-sm text-gray-900 dark:text-white">
                                                     ৳ {order.total_price}
                                                 </span>
@@ -738,7 +743,7 @@ export default function Orders({ orders }: Props) {
                     </div>
 
                     <div className="xl:col-span-5 space-y-5 min-h-0">
-                        {renderOrderDetailPanel(activeOrder)}
+                        {renderOrderDetailPanel(activeOrder, false)}
                     </div>
 
                     {activeOrder && (
